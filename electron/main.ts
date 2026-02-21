@@ -460,7 +460,7 @@ const createWindow = () => {
       // ※起動時にapp.dock.hide()を呼ぶとフルスクリーンSpaceで起動してしまうため
       if (process.platform === "darwin" && app.dock) {
         setTimeout(() => {
-          app.dock.hide();
+          app.dock?.hide();
           console.log("[Main] Dock icon hidden after window shown");
         }, 500);
       }
