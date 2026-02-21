@@ -9,5 +9,9 @@
       "Read(**/release/**)"
     ]
   },
+  "sandbox": {
+    "enabled": true,
+    "autoAllowBashIfSandboxed": true
+  },
   "plansDirectory": ".claude/plans"
 }
