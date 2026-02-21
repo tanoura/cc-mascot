@@ -1,17 +1,25 @@
 {
   "permissions": {
     "allow": ["Bash", "WebFetch", "WebSearch", "Write", "Edit", "Skill", "mcp__electron"],
-    "deny": [
-      "Read(**/coverage/**)",
-      "Read(**/dist/**)",
-      "Read(**/dist-electron/**)",
-      "Read(**/node_modules/**)",
-      "Read(**/release/**)"
+    "ask": [
+      "Bash(pip install *)",
+      "Bash(pip3 install *)",
+      "Bash(uv add *)",
+      "Bash(pipx install *)",
+      "Bash(brew install *)",
+      "Bash(npm install -g *)",
+      "Bash(npm install --global *)",
+      "Bash(yarn global add *)",
+      "Bash(deno install -g *)",
+      "Bash(deno install --global *)",
+      "Bash(bun install -g *)",
+      "Bash(bun install --global *)",
+      "Bash(gem install *)",
+      "Bash(cargo install *)",
+      "Bash(git push -f *)",
+      "Bash(git push --force *)",
+      "Bash(rm -rf *)"
     ]
-  },
-  "sandbox": {
-    "enabled": true,
-    "autoAllowBashIfSandboxed": true
   },
   "plansDirectory": ".claude/plans"
 }
