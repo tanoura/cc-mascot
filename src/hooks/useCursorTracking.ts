@@ -66,9 +66,7 @@ export function useCursorTracking(
 
   // Update options method
   const updateOptions = useCallback((newOptions: Partial<CursorTrackingOptions>) => {
-    console.log("[useCursorTracking] updateOptions called with:", newOptions);
     optionsRef.current = { ...optionsRef.current, ...newOptions };
-    console.log("[useCursorTracking] Updated optionsRef.current:", optionsRef.current);
   }, []);
 
   const { camera } = useThree();

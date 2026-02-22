@@ -88,7 +88,6 @@ export const VRMAvatar = forwardRef<VRMAvatarHandle, VRMAvatarProps>(function VR
   // Update cursor tracking when options change
   useEffect(() => {
     if (cursorTrackingOptions) {
-      console.log("[VRMAvatar] cursorTrackingOptions changed:", cursorTrackingOptions);
       updateCursorTracking(cursorTrackingOptions);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
