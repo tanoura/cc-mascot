@@ -542,8 +542,9 @@ plugin/
 
 プラットフォーム対応:
 
-- 現時点ではmacOSのみ対応（シェルスクリプト + macOSのファイルパス前提）
-- Windows対応は将来的に行う
+- macOS / Windows対応（シェルスクリプト内で `uname` によるOS判定・パス分岐）
+- WindowsではClaude CodeがGit Bash経由でhookを実行するため、`.sh` スクリプトがそのまま動作する
+- スキル（SKILL.md）はOS別のコマンド例を記載し、AIが実行時にOSを判別して適切なコマンドを選択する
 
 インストール方法:
 
