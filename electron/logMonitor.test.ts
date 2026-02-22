@@ -444,4 +444,290 @@ describe("logMonitor", () => {
       expect(mockWatcher.on).toHaveBeenCalledWith("error", expect.any(Function));
     });
   });
+
+  describe("セッションフィルタリング", () => {
+    it("getActiveSessionIdが未指定の場合は全ファイルを処理する", async () => {
+      vi.spyOn(console, "log").mockImplementation(() => {});
+      const { parseClaudeCodeLog } = await import("./parsers/claudeCodeParser");
+      const { cleanTextForSpeech } = await import("./filters/textFilter");
+
+      (parseClaudeCodeLog as any).mockReturnValue([{ type: "speak", text: "テスト", emotion: "neutral" }]);
+      (cleanTextForSpeech as any).mockReturnValue("テスト");
+
+      let addCallback: ((filePath: string) => void) | null = null;
+      let changeCallback: ((filePath: string) => void) | null = null;
+      const mockRl = {
+        on: vi.fn((event: string, callback: (line?: string) => void) => {
+          if (event === "line") callback("some-json-line");
+          if (event === "close") callback();
+        }),
+      };
+      const mockStream = {
+        on: vi.fn((event: string, callback: () => void) => {
+          if (event === "close") callback();
+        }),
+      };
+      const mockWatcher = {
+        on: vi.fn((event: string, callback: (arg?: any) => void) => {
+          if (event === "add") addCallback = callback as (filePath: string) => void;
+          if (event === "change") changeCallback = callback as (filePath: string) => void;
+        }),
+        close: vi.fn(),
+      };
+
+      (chokidarMod.watch as any).mockReturnValue(mockWatcher as any);
+      (fsMod.createReadStream as any).mockReturnValue(mockStream as any);
+      (readlineMod.createInterface as any).mockReturnValue(mockRl as any);
+
+      (fsMod.statSync as any).mockReturnValue({ size: 100 } as fsMod.Stats);
+      createLogMonitor(mockBroadcast); // getActiveSessionId未指定
+      addCallback!("/test/any-session.jsonl");
+
+      (fsMod.statSync as any).mockReturnValue({ size: 200 } as fsMod.Stats);
+      changeCallback!("/test/any-session.jsonl");
+
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(mockBroadcast).toHaveBeenCalled();
+    });
+
+    it("getActiveSessionIdがnullを返す場合は全ファイルを処理する", async () => {
+      vi.spyOn(console, "log").mockImplementation(() => {});
+      const { parseClaudeCodeLog } = await import("./parsers/claudeCodeParser");
+      const { cleanTextForSpeech } = await import("./filters/textFilter");
+
+      (parseClaudeCodeLog as any).mockReturnValue([{ type: "speak", text: "テスト", emotion: "neutral" }]);
+      (cleanTextForSpeech as any).mockReturnValue("テスト");
+
+      let addCallback: ((filePath: string) => void) | null = null;
+      let changeCallback: ((filePath: string) => void) | null = null;
+      const mockRl = {
+        on: vi.fn((event: string, callback: (line?: string) => void) => {
+          if (event === "line") callback("some-json-line");
+          if (event === "close") callback();
+        }),
+      };
+      const mockStream = {
+        on: vi.fn((event: string, callback: () => void) => {
+          if (event === "close") callback();
+        }),
+      };
+      const mockWatcher = {
+        on: vi.fn((event: string, callback: (arg?: any) => void) => {
+          if (event === "add") addCallback = callback as (filePath: string) => void;
+          if (event === "change") changeCallback = callback as (filePath: string) => void;
+        }),
+        close: vi.fn(),
+      };
+
+      (chokidarMod.watch as any).mockReturnValue(mockWatcher as any);
+      (fsMod.createReadStream as any).mockReturnValue(mockStream as any);
+      (readlineMod.createInterface as any).mockReturnValue(mockRl as any);
+
+      (fsMod.statSync as any).mockReturnValue({ size: 100 } as fsMod.Stats);
+      createLogMonitor(mockBroadcast, false, () => null);
+      addCallback!("/test/null-filter-session.jsonl");
+
+      (fsMod.statSync as any).mockReturnValue({ size: 200 } as fsMod.Stats);
+      changeCallback!("/test/null-filter-session.jsonl");
+
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(mockBroadcast).toHaveBeenCalled();
+    });
+
+    it("アクティブセッションIDとファイル名が一致する場合は処理する", async () => {
+      vi.spyOn(console, "log").mockImplementation(() => {});
+      const { parseClaudeCodeLog } = await import("./parsers/claudeCodeParser");
+      const { cleanTextForSpeech } = await import("./filters/textFilter");
+
+      (parseClaudeCodeLog as any).mockReturnValue([{ type: "speak", text: "テスト", emotion: "neutral" }]);
+      (cleanTextForSpeech as any).mockReturnValue("テスト");
+
+      let addCallback: ((filePath: string) => void) | null = null;
+      let changeCallback: ((filePath: string) => void) | null = null;
+      const mockRl = {
+        on: vi.fn((event: string, callback: (line?: string) => void) => {
+          if (event === "line") callback("some-json-line");
+          if (event === "close") callback();
+        }),
+      };
+      const mockStream = {
+        on: vi.fn((event: string, callback: () => void) => {
+          if (event === "close") callback();
+        }),
+      };
+      const mockWatcher = {
+        on: vi.fn((event: string, callback: (arg?: any) => void) => {
+          if (event === "add") addCallback = callback as (filePath: string) => void;
+          if (event === "change") changeCallback = callback as (filePath: string) => void;
+        }),
+        close: vi.fn(),
+      };
+
+      (chokidarMod.watch as any).mockReturnValue(mockWatcher as any);
+      (fsMod.createReadStream as any).mockReturnValue(mockStream as any);
+      (readlineMod.createInterface as any).mockReturnValue(mockRl as any);
+
+      const sessionId = "abc-123-def";
+      (fsMod.statSync as any).mockReturnValue({ size: 100 } as fsMod.Stats);
+      createLogMonitor(mockBroadcast, false, () => sessionId);
+      addCallback!(`/home/user/.claude/projects/test/${sessionId}.jsonl`);
+
+      (fsMod.statSync as any).mockReturnValue({ size: 200 } as fsMod.Stats);
+      changeCallback!(`/home/user/.claude/projects/test/${sessionId}.jsonl`);
+
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(mockBroadcast).toHaveBeenCalled();
+    });
+
+    it("アクティブセッションIDとファイル名が一致しない場合はスキップし位置を進める", () => {
+      vi.spyOn(console, "log").mockImplementation(() => {});
+      let addCallback: ((filePath: string) => void) | null = null;
+      let changeCallback: ((filePath: string) => void) | null = null;
+      const mockWatcher = {
+        on: vi.fn((event: string, callback: (arg?: any) => void) => {
+          if (event === "add") addCallback = callback as (filePath: string) => void;
+          if (event === "change") changeCallback = callback as (filePath: string) => void;
+        }),
+        close: vi.fn(),
+      };
+
+      (chokidarMod.watch as any).mockReturnValue(mockWatcher as any);
+
+      const activeSessionId = "active-session-123";
+      (fsMod.statSync as any).mockReturnValue({ size: 100 } as fsMod.Stats);
+      createLogMonitor(mockBroadcast, false, () => activeSessionId);
+      addCallback!("/test/other-session-456.jsonl");
+
+      // ファイルが変更された（サイズが増加）
+      (fsMod.statSync as any).mockReturnValue({ size: 500 } as fsMod.Stats);
+      changeCallback!("/test/other-session-456.jsonl");
+
+      // broadcastは呼ばれず、createReadStreamも呼ばれない（スキップされた）
+      expect(mockBroadcast).not.toHaveBeenCalled();
+      expect(fsMod.createReadStream).not.toHaveBeenCalled();
+    });
+
+    it("サブエージェントのファイルは親ディレクトリ名でセッションIDを判定する", async () => {
+      vi.spyOn(console, "log").mockImplementation(() => {});
+      const { parseClaudeCodeLog } = await import("./parsers/claudeCodeParser");
+      const { cleanTextForSpeech } = await import("./filters/textFilter");
+
+      (parseClaudeCodeLog as any).mockReturnValue([{ type: "speak", text: "テスト", emotion: "neutral" }]);
+      (cleanTextForSpeech as any).mockReturnValue("テスト");
+
+      let addCallback: ((filePath: string) => void) | null = null;
+      let changeCallback: ((filePath: string) => void) | null = null;
+      const mockRl = {
+        on: vi.fn((event: string, callback: (line?: string) => void) => {
+          if (event === "line") callback("some-json-line");
+          if (event === "close") callback();
+        }),
+      };
+      const mockStream = {
+        on: vi.fn((event: string, callback: () => void) => {
+          if (event === "close") callback();
+        }),
+      };
+      const mockWatcher = {
+        on: vi.fn((event: string, callback: (arg?: any) => void) => {
+          if (event === "add") addCallback = callback as (filePath: string) => void;
+          if (event === "change") changeCallback = callback as (filePath: string) => void;
+        }),
+        close: vi.fn(),
+      };
+
+      (chokidarMod.watch as any).mockReturnValue(mockWatcher as any);
+      (fsMod.createReadStream as any).mockReturnValue(mockStream as any);
+      (readlineMod.createInterface as any).mockReturnValue(mockRl as any);
+
+      const sessionId = "main-session-789";
+      const subAgentFile = `/home/user/.claude/projects/test/${sessionId}/sub-agent-001.jsonl`;
+
+      (fsMod.statSync as any).mockReturnValue({ size: 100 } as fsMod.Stats);
+      createLogMonitor(mockBroadcast, true, () => sessionId);
+      addCallback!(subAgentFile);
+
+      (fsMod.statSync as any).mockReturnValue({ size: 200 } as fsMod.Stats);
+      changeCallback!(subAgentFile);
+
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(mockBroadcast).toHaveBeenCalled();
+    });
+
+    it("フィルタ解除後にスキップされた内容が再生されない（skipFileChanges）", async () => {
+      vi.spyOn(console, "log").mockImplementation(() => {});
+      const { parseClaudeCodeLog } = await import("./parsers/claudeCodeParser");
+      const { cleanTextForSpeech } = await import("./filters/textFilter");
+
+      (parseClaudeCodeLog as any).mockReturnValue([{ type: "speak", text: "テスト", emotion: "neutral" }]);
+      (cleanTextForSpeech as any).mockReturnValue("テスト");
+
+      let addCallback: ((filePath: string) => void) | null = null;
+      let changeCallback: ((filePath: string) => void) | null = null;
+      const mockRl = {
+        on: vi.fn((event: string, callback: (line?: string) => void) => {
+          if (event === "line") callback("some-json-line");
+          if (event === "close") callback();
+        }),
+      };
+      const mockStream = {
+        on: vi.fn((event: string, callback: () => void) => {
+          if (event === "close") callback();
+        }),
+      };
+      const mockWatcher = {
+        on: vi.fn((event: string, callback: (arg?: any) => void) => {
+          if (event === "add") addCallback = callback as (filePath: string) => void;
+          if (event === "change") changeCallback = callback as (filePath: string) => void;
+        }),
+        close: vi.fn(),
+      };
+
+      (chokidarMod.watch as any).mockReturnValue(mockWatcher as any);
+      (fsMod.createReadStream as any).mockReturnValue(mockStream as any);
+      (readlineMod.createInterface as any).mockReturnValue(mockRl as any);
+
+      let activeSessionId: string | null = "active-session";
+      const filePath = "/test/other-session.jsonl";
+
+      (fsMod.statSync as any).mockReturnValue({ size: 100 } as fsMod.Stats);
+      createLogMonitor(mockBroadcast, false, () => activeSessionId);
+      addCallback!(filePath);
+
+      // フィルタ中にファイルが変更される（サイズ100→500）
+      (fsMod.statSync as any).mockReturnValue({ size: 500 } as fsMod.Stats);
+      changeCallback!(filePath);
+
+      // broadcastは呼ばれない
+      expect(mockBroadcast).not.toHaveBeenCalled();
+
+      // フィルタ解除
+      activeSessionId = null;
+
+      // さらにファイルが変更される（サイズ500→600、差分は小さい）
+      // 500→600の差分のみ処理される（100→500の内容はスキップ済み）
+      vi.advanceTimersByTime(200); // デバウンスを超える
+      (fsMod.statSync as any).mockReturnValue({ size: 600 } as fsMod.Stats);
+      changeCallback!(filePath);
+
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      // 600-500=100バイト分のみ読み取られる
+      expect(fsMod.createReadStream).toHaveBeenCalledWith(filePath, expect.objectContaining({ start: 500, end: 599 }));
+    });
+  });
 });
