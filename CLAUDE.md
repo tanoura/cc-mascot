@@ -10,7 +10,7 @@
 
 - **オフライン動作**: ローカル環境で完結、インターネット接続不要
 - **日本語専用**: 日本語の音声合成とルールベース感情分析に最適化
-- **プラグイン不要**: Claude Codeのログファイル監視による自動連携
+- **プラグイン不要**: Claude Codeのログファイル監視による自動連携（オプションでプラグイン連携も可能）
 - **シンプルな構成**: Electron + React + Three.js + VRM
 
 ### 技術スタック
@@ -68,6 +68,7 @@
 ┌─────────────────────────────────────────────┐
 │  Electron Main Process                      │
 │  ├─ logMonitor.ts (ファイル監視)              │
+│  ├─ activeSessionMonitor.ts (セッションフィルタ) │
 │  ├─ claudeCodeParser.ts (JSONL解析)          │
 │  ├─ textFilter.ts (Markdown除去)             │
 │  ├─ ruleBasedEmotionClassifier.ts (感情判定) │
@@ -127,6 +128,7 @@
 - 右サイドパネル（幅400px、全画面高さ、半透明背景 + backdrop-blur）
 - スティッキーヘッダー（スクロールしても閉じるボタンが常に表示）
 - React内で直接状態共有（リレー型IPC不要）
+- セッションフィルタ状態表示・解除ボタン
 - エンジン選択（AivisSpeech/VOICEVOX/Custom）
 - スピーカー選択
 - 音量調整
@@ -156,6 +158,8 @@
 ```
 ファイル変更検出 (chokidar)
   ↓
+セッションフィルタ判定 (ファイルパスベース)
+  ↓ フィルタ外のファイルはファイル位置のみ進めてスキップ
 差分読み取り (readline)
   ↓
 行ごとにJSONLパース (claudeCodeParser)
@@ -383,6 +387,9 @@ IPC通信:
 - `get/set-enable-speech-animations`: レンダラー↔メイン（発話アニメーション設定・永続化のみ）
 - `get/set-speaker-id`: レンダラー↔メイン（話者ID・永続化のみ）
 - `get/set-volume-scale`: レンダラー↔メイン（音量スケール・永続化のみ）
+- `get-active-session`: レンダラー→メイン（現在のセッションフィルタID取得）
+- `clear-active-session`: レンダラー→メイン（セッションフィルタ解除）
+- `active-session-changed`: メイン→レンダラー（セッションフィルタ状態変化）
 - `reset-all-settings`: レンダラー→メイン（全設定リセット）
 - `toggle-settings-panel`: メイン→レンダラー（トレイメニューからの設定パネル表示切替）
 - `open-devtools`: レンダラー→メイン（DevToolsを開く）
@@ -473,6 +480,82 @@ Electronとの統合（electron/main.ts）:
 
 開発モード時（`npm run dev`）にChrome DevTools Protocol経由でElectronアプリに接続し、デバッグ・操作を可能にします。
 
+### 12. セッションフィルタリング
+
+**electron/activeSessionMonitor.ts**
+
+Claude Codeの並列実行時に特定セッションのみを発話対象にフィルタリングする機能。
+
+仕組み:
+
+- `app.getPath('userData')/active-session` ファイルを chokidar で監視
+- ファイル内容はプレーンテキスト（セッションIDのみ）
+- ファイルが存在しない or 空 = 全セッション発話（デフォルト動作）
+- ファイルにセッションIDが書き込まれると、そのセッションのみ発話
+
+フィルタリングロジック（logMonitor.ts）:
+
+- ファイルパスのベースネーム（拡張子除去）がセッションIDと一致 → 通過
+- 親ディレクトリ名がセッションIDと一致（サブエージェント） → 通過
+- フィルタ外のファイルは `skipFileChanges()` でファイル位置のみ進めてスキップ（フィルタ解除後に過去の発話が再生されるのを防ぐ）
+
+操作方法:
+
+- Claude Codeプラグイン（`plugin/`）の `/cc-mascot:speak-this` スキルでセッション固定
+- `/cc-mascot:speak-all` スキルでフィルタ解除
+- 設定画面の解除ボタンでもフィルタ解除可能
+- SessionEndフックで自動解除（強制終了時は呼ばれない可能性あり）
+
+### 13. Claude Codeプラグイン
+
+**plugin/**
+
+セッションフィルタリング機能をClaude Codeから操作するためのプラグイン。
+
+構成:
+
+```
+plugin/
+├── .claude-plugin/
+│   └── plugin.json          # プラグインマニフェスト（name: "cc-mascot"）
+├── hooks/
+│   └── hooks.json           # SessionStart / SessionEnd フック定義
+├── scripts/
+│   ├── on-session-start.sh  # セッションIDをCLAUDE_ENV_FILEに保存
+│   └── on-session-end.sh    # active-sessionファイルの一致確認+削除
+└── skills/
+    ├── speak-this/
+    │   └── SKILL.md          # /cc-mascot:speak-this スキル
+    └── speak-all/
+        └── SKILL.md          # /cc-mascot:speak-all スキル
+```
+
+フック:
+
+- SessionStart: stdinのJSONから `session_id` を取得し、`CLAUDE_ENV_FILE` に `CC_MASCOT_SESSION_ID` として保存
+- SessionEnd: `active-session` ファイルの内容が終了セッションと一致すれば削除（ベストエフォート）
+
+スキル:
+
+- `/cc-mascot:speak-this`: `$CC_MASCOT_SESSION_ID` を active-session ファイルに書き込み
+- `/cc-mascot:speak-all`: active-session ファイルを削除
+
+プラットフォーム対応:
+
+- 現時点ではmacOSのみ対応（シェルスクリプト + macOSのファイルパス前提）
+- Windows対応は将来的に行う
+
+インストール方法:
+
+```bash
+# 開発中のローカルテスト
+claude --plugin-dir ./plugin
+
+# マーケットプレイス経由
+/plugin marketplace add kazakago/cc-mascot
+/plugin install cc-mascot@cc-mascot
+```
+
 ## データストレージ
 
 ### IndexedDB（Renderer Process）
@@ -500,7 +583,7 @@ Electronとの統合（electron/main.ts）:
 | `volumeScale`            | number  | 1.0        | 音量スケール（0.0〜2.0）                |
 | `autoUpdateCheck`        | boolean | true       | 起動時にアップデートを確認するか        |
 
-### 12. ランディングページ（GitHub Pages）
+### 14. ランディングページ（GitHub Pages）
 
 **docs/**
 
@@ -538,6 +621,7 @@ cc-mascot/
 ├── resources/         # パッケージングリソース（アイコン・コンパイル済みバイナリ）
 ├── src/               # Electronレンダラープロセス（React + Three.js + VRM）
 ├── public/            # 静的アセット（VRMモデル・VRMAアニメーション）
+├── plugin/            # Claude Codeプラグイン（セッションフィルタリング）
 ├── docs/              # GitHub Pages LP（静的サイト・利用規約・プライバシーポリシー）
 ├── build/             # パッケージング設定（entitlements等）
 └── package.json
@@ -583,6 +667,17 @@ cc-mascot/
 - [ ] クリックスルーが動作するか
 - [ ] 設定パネルが開閉するか（右クリック・トレイメニュー）
 - [ ] テスト音声が再生されるか
+
+### セッションフィルタリング関連
+
+- [ ] active-sessionファイルにUUIDを書き込むと、そのセッションのログのみ発話されるか
+- [ ] active-sessionファイルを削除すると全セッションの発話に戻るか
+- [ ] フィルタ中に他セッションの発話がキューに溜まらず握りつぶされるか
+- [ ] 設定画面にフィルタ状態が表示されるか
+- [ ] 設定画面の解除ボタンでフィルタが解除されるか
+- [ ] 「全設定リセット」でフィルタが解除されるか
+- [ ] プラグイン: `/cc-mascot:speak-this` でセッション固定されるか
+- [ ] プラグイン: `/cc-mascot:speak-all` でフィルタ解除されるか
 
 ### マイクミュート関連（macOS / Windows）
 
