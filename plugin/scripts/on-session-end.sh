@@ -1,0 +1,16 @@
+#!/bin/bash
+# SessionEnd hook: Clear active-session file if it matches the ending session (best-effort).
+# stdin receives JSON: {"session_id": "...", "reason": "...", ...}
+
+ACTIVE_SESSION_FILE="$HOME/Library/Application Support/cc-mascot/active-session"
+
+SESSION_ID=$(cat /dev/stdin | sed -n 's/.*"session_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
+
+if [ -n "$SESSION_ID" ] && [ -f "$ACTIVE_SESSION_FILE" ]; then
+  CURRENT=$(cat "$ACTIVE_SESSION_FILE" 2>/dev/null | tr -d '[:space:]')
+  if [ "$CURRENT" = "$SESSION_ID" ]; then
+    rm -f "$ACTIVE_SESSION_FILE"
+  fi
+fi
+
+exit 0

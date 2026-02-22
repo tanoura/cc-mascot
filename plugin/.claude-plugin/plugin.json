@@ -1,0 +1,6 @@
+{
+  "name": "cc-mascot",
+  "description": "CC Mascotのセッション発話制御プラグイン。特定のClaude Codeセッションのみを発話対象にフィルタリングできます。",
+  "version": "0.1.0",
+  "repository": "https://github.com/kazakago/cc-mascot"
+}
