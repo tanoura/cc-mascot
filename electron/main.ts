@@ -3,6 +3,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { spawn, execSync, ChildProcess } from "child_process";
 import { createLogMonitor } from "./logMonitor";
+import { createActiveSessionMonitor, clearActiveSessionFile } from "./activeSessionMonitor";
 import { initAutoUpdater, checkForUpdatesManually } from "./autoUpdater";
 import fs from "fs";
 import net from "net";
@@ -31,6 +32,8 @@ const store = new Store();
 let mainWindow: BrowserWindow | null = null;
 let licenseWindow: BrowserWindow | null = null;
 let logMonitor: { close: () => void } | null = null;
+let activeSessionMonitor: { close: () => void } | null = null;
+let activeSessionId: string | null = null;
 let voicevoxProcess: ChildProcess | null = null;
 let micMonitorProcess: ChildProcess | null = null;
 let micActive = false;
@@ -55,7 +58,7 @@ function startLogMonitor(): void {
 
   const includeSubAgents = (store.get("includeSubAgents") as boolean | undefined) ?? false;
   console.log(`[LogMonitor] Starting with includeSubAgents=${includeSubAgents}`);
-  logMonitor = createLogMonitor(broadcast, includeSubAgents);
+  logMonitor = createLogMonitor(broadcast, includeSubAgents, () => activeSessionId);
 }
 
 // Get mic-monitor binary path
@@ -825,6 +828,16 @@ ipcMain.handle("get-screen-size", () => {
   return { width, height };
 });
 
+// Active session filter
+ipcMain.handle("get-active-session", () => {
+  return activeSessionId;
+});
+
+ipcMain.handle("clear-active-session", () => {
+  clearActiveSessionFile();
+  return true;
+});
+
 // Reset all settings (including character size and position)
 ipcMain.handle("reset-all-settings", async () => {
   store.delete("engineType");
@@ -839,6 +852,7 @@ ipcMain.handle("reset-all-settings", async () => {
   store.delete("volumeScale");
   store.delete("autoUpdateCheck");
   stopMicMonitor();
+  clearActiveSessionFile();
 
   await stopVoicevoxEngine();
   const started = await startVoicevoxEngine(true);
@@ -1020,6 +1034,15 @@ ipcMain.on("set-ignore-mouse-events", (_event, ignore: boolean) => {
 app.whenReady().then(async () => {
   createTray();
 
+  // Start active session monitor
+  activeSessionMonitor = createActiveSessionMonitor((sessionId) => {
+    activeSessionId = sessionId;
+    console.log(`[ActiveSession] Filter: ${sessionId ?? "none (all sessions)"}`);
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send("active-session-changed", sessionId);
+    }
+  });
+
   // Check if engine binary exists before attempting to start
   const enginePath = getEnginePath();
   const engineInstalled = enginePath ? fs.existsSync(enginePath) : false;
@@ -1068,6 +1091,9 @@ app.on("before-quit", async (event) => {
 
   if (logMonitor) {
     logMonitor.close();
+  }
+  if (activeSessionMonitor) {
+    activeSessionMonitor.close();
   }
   if (tray) {
     tray.destroy();

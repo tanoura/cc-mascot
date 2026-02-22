@@ -63,6 +63,7 @@ export default function SettingsPanel({
   const [micMonitorAvailable, setMicMonitorAvailable] = useState(false);
   const [includeSubAgents, setIncludeSubAgents] = useState(false);
   const [autoUpdateCheck, setAutoUpdateCheck] = useState(true);
+  const [activeSession, setActiveSession] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -136,6 +137,11 @@ export default function SettingsPanel({
         setAutoUpdateCheck(enabled);
       }
 
+      if (window.electron?.getActiveSession) {
+        const session = await window.electron.getActiveSession();
+        setActiveSession(session);
+      }
+
       // Load VRM file name from IndexedDB
       try {
         const vrmFile = await loadVRMFile();
@@ -147,6 +153,14 @@ export default function SettingsPanel({
       }
     };
     loadInitialValues();
+  }, []);
+
+  // Listen for active session changes
+  useEffect(() => {
+    const cleanup = window.electron?.onActiveSessionChanged?.((sessionId) => {
+      setActiveSession(sessionId);
+    });
+    return () => cleanup?.();
   }, []);
 
   // Fetch speakers on mount
@@ -280,6 +294,11 @@ export default function SettingsPanel({
     await window.electron?.setAutoUpdateCheck?.(value);
   };
 
+  const handleClearActiveSession = async () => {
+    await window.electron?.clearActiveSession?.();
+    setActiveSession(null);
+  };
+
   const handleTestSpeech = () => {
     if (isPlayingTest || speakers.length === 0) {
       return;
@@ -328,6 +347,25 @@ export default function SettingsPanel({
         </div>
 
         <div className="p-6 space-y-5">
+          {/* Session Filter Status */}
+          {activeSession && (
+            <section className="rounded-2xl bg-blue-50/80 p-4 shadow-sm border border-blue-200">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-blue-800 m-0">特定セッションのみ発話中</p>
+                  <p className="text-xs text-blue-600 m-0 mt-1 font-mono">{activeSession}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleClearActiveSession}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors whitespace-nowrap"
+                >
+                  解除
+                </button>
+              </div>
+            </section>
+          )}
+
           {/* Character Section */}
           <section className="rounded-2xl bg-slate-50/60 p-6 shadow-sm">
             <h2 className="m-0 mb-4 text-lg font-semibold text-slate-800 flex items-center gap-2">
