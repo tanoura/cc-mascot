@@ -11,13 +11,19 @@ CC Mascotアプリの発話フィルタを解除し、すべてのClaude Codeセ
 
 ## 手順
 
-1. `~/Library/Application Support/cc-mascot/active-session` ファイルを削除する
+1. active-sessionファイルを削除する
 2. 完了メッセージを表示する
 
-以下のBashコマンドを実行してください:
+OSに応じて以下のいずれかのBashコマンドを実行してください:
 
+macOS:
 ```bash
 rm -f "$HOME/Library/Application Support/cc-mascot/active-session"
+```
+
+Windows:
+```bash
+rm -f "$APPDATA/cc-mascot/active-session"
 ```
 
 実行後、「CC Mascotの発話をすべてのセッションに戻しました。」とだけ報告してください。

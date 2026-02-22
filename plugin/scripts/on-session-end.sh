@@ -2,7 +2,14 @@
 # SessionEnd hook: Clear active-session file if it matches the ending session (best-effort).
 # stdin receives JSON: {"session_id": "...", "reason": "...", ...}
 
-ACTIVE_SESSION_FILE="$HOME/Library/Application Support/cc-mascot/active-session"
+case "$(uname)" in
+  Darwin)
+    ACTIVE_SESSION_FILE="$HOME/Library/Application Support/cc-mascot/active-session"
+    ;;
+  *)
+    ACTIVE_SESSION_FILE="$APPDATA/cc-mascot/active-session"
+    ;;
+esac
 
 SESSION_ID=$(cat /dev/stdin | sed -n 's/.*"session_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
 
