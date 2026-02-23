@@ -1,7 +1,7 @@
 <p align="center">
-  <img src="docs/icon.png" alt="cc-mascot" width="64" height="64">
+  <img src="docs/icon.png" alt="CC Mascot" width="64" height="64">
 </p>
-<h1 align="center">cc-mascot</h1>
+<h1 align="center">CC Mascot</h1>
 <p align="center">Claude Codeからの返答をVRMキャラクターがリアルタイムで読み上げ。<br />感情表現・リップシンク・視線追従で、コーディングに楽しいパートナーを。</p>
 <p align="center">
   <a href="https://kazakago.github.io/cc-mascot/">https://kazakago.github.io/cc-mascot/</a>
@@ -51,17 +51,17 @@ https://github.com/user-attachments/assets/f2742eac-1df3-436a-b79c-f7221e677474
 > - Windows: `AivisSpeech/AivisSpeech-Engine/run.exe`
 
 初回起動とモデルDLまで済ませれば上記アプリケーションを起動しておく必要はありません。  
-cc-mascotが自動的にエンジンプロセスを起動します。
+CC Mascotが自動的にエンジンプロセスを起動します。
 
 本アプリケーションはVOICEVOX API互換のエンジンを利用して動作します。  
 設定変更することで **[VOICEVOX](https://voicevox.hiroshiba.jp/)** も利用可能です。
 
-### 2. cc-mascotアプリケーションのインストール
+### 2. CC Mascotアプリケーションのインストール
 
 下記から最新バイナリをインストールしてください。  
 https://github.com/kazakago/cc-mascot/releases
 
-### 3. cc-mascotアプリケーションの起動
+### 3. CC Mascotアプリケーションの起動
 
 アプリケーションを起動すると、VRMキャラクターと**システムトレイにアイコン**が表示されます。
 
@@ -87,7 +87,7 @@ https://github.com/kazakago/cc-mascot/releases
 
 - **設定を開く**: 設定画面にアクセスできます。
 - **バージョン情報**: バージョン情報とライセンス情報、アップデートを確認できます。
-- **終了**: cc-mascotを終了します。
+- **終了**: CC Mascotを終了します。
 
 ### リップシンクと表情変更
 
