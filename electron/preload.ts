@@ -146,4 +146,19 @@ contextBridge.exposeInMainWorld("electron", {
   }> => {
     return ipcRenderer.invoke("get-animation-manifest");
   },
+  getActiveSession: (): Promise<string | null> => {
+    return ipcRenderer.invoke("get-active-session");
+  },
+  clearActiveSession: (): Promise<boolean> => {
+    return ipcRenderer.invoke("clear-active-session");
+  },
+  onActiveSessionChanged: (callback: (sessionId: string | null) => void) => {
+    const listener = (_event: unknown, sessionId: string | null) => {
+      callback(sessionId);
+    };
+    ipcRenderer.on("active-session-changed", listener);
+    return () => {
+      ipcRenderer.removeListener("active-session-changed", listener);
+    };
+  },
 });

@@ -48,6 +48,9 @@ declare global {
       getAutoUpdateCheck: () => Promise<boolean>;
       setAutoUpdateCheck: (value: boolean) => Promise<boolean>;
       getAnimationManifest: () => Promise<AnimationManifest>;
+      getActiveSession: () => Promise<string | null>;
+      clearActiveSession: () => Promise<boolean>;
+      onActiveSessionChanged: (callback: (sessionId: string | null) => void) => () => void;
     };
   }
 }

@@ -23,8 +23,14 @@ type BroadcastFn = (message: string) => void;
  * Create a log monitor that watches Claude Code session logs
  * @param broadcast - Callback function to send messages to the renderer process
  * @param includeSubAgents - Whether to monitor sub-agent logs (depth: 3) or only main agent (depth: 1)
+ * @param getActiveSessionId - Optional getter that returns the active session ID for filtering.
+ *                             When it returns a non-null value, only logs from that session are broadcast.
  */
-export function createLogMonitor(broadcast: BroadcastFn, includeSubAgents = false) {
+export function createLogMonitor(
+  broadcast: BroadcastFn,
+  includeSubAgents = false,
+  getActiveSessionId?: () => string | null,
+) {
   const claudeConfigDir = process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), ".claude");
   const claudeProjectsDir = path.join(claudeConfigDir, "projects");
 
@@ -42,6 +48,13 @@ export function createLogMonitor(broadcast: BroadcastFn, includeSubAgents = fals
   });
 
   watcher.on("change", (filePath: string) => {
+    // Filter by active session ID if set
+    const activeSessionId = getActiveSessionId?.() ?? null;
+    if (activeSessionId && !shouldProcessFile(filePath, activeSessionId)) {
+      // Advance file position without processing so content is discarded
+      skipFileChanges(filePath);
+      return;
+    }
     console.log(`[LogMonitor] File changes detected: ${filePath}`);
     processFileChanges(filePath, broadcast, includeSubAgents);
   });
@@ -69,6 +82,19 @@ function initializeFilePosition(filePath: string) {
     filePositions.set(filePath, stats.size);
   } catch {
     filePositions.set(filePath, 0);
+  }
+}
+
+/**
+ * Advance the file position to the end without processing content.
+ * This discards filtered-out messages so they aren't replayed when the filter is removed.
+ */
+function skipFileChanges(filePath: string) {
+  try {
+    const stats = fs.statSync(filePath);
+    filePositions.set(filePath, stats.size);
+  } catch {
+    // ignore
   }
 }
 
@@ -142,6 +168,21 @@ async function readNewLines(filePath: string, startPosition: number, endPosition
  * @param broadcast - Callback function to send messages to the renderer process
  * @param includeSubAgents - Whether to include sub-agent messages
  */
+/**
+ * Check if a log file should be processed based on the active session ID.
+ * JSONL files are named {sessionId}.jsonl, and sub-agent files are in {sessionId}/{subId}.jsonl.
+ */
+function shouldProcessFile(filePath: string, activeSessionId: string): boolean {
+  const basename = path.basename(filePath, ".jsonl");
+  if (basename === activeSessionId) return true;
+
+  // Sub-agent: parent directory name is the session ID
+  const parentDir = path.basename(path.dirname(filePath));
+  if (parentDir === activeSessionId) return true;
+
+  return false;
+}
+
 function processLogLine(line: string, broadcast: BroadcastFn, includeSubAgents: boolean, logFilePath?: string) {
   // Parse the log line using Claude Code parser
   const messages: SpeakMessage[] = parseClaudeCodeLog(line, includeSubAgents, logFilePath);
