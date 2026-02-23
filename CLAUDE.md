@@ -526,8 +526,10 @@ plugin/
 └── skills/
     ├── speak-this/
     │   └── SKILL.md          # /cc-mascot:speak-this スキル
-    └── speak-all/
-        └── SKILL.md          # /cc-mascot:speak-all スキル
+    ├── speak-all/
+    │   └── SKILL.md          # /cc-mascot:speak-all スキル
+    └── speak-status/
+        └── SKILL.md          # /cc-mascot:speak-status スキル
 ```
 
 フック:
@@ -539,6 +541,7 @@ plugin/
 
 - `/cc-mascot:speak-this`: `$CC_MASCOT_SESSION_ID` を active-session ファイルに書き込み
 - `/cc-mascot:speak-all`: active-session ファイルを削除
+- `/cc-mascot:speak-status`: 現在の発話フィルタ状態を確認（全セッション or 特定セッション）
 
 プラットフォーム対応:
 
