@@ -38,6 +38,7 @@ let voicevoxProcess: ChildProcess | null = null;
 let micMonitorProcess: ChildProcess | null = null;
 let micActive = false;
 let tray: Tray | null = null;
+let isCharacterVisible = true;
 
 const VOICEVOX_PORT = 8564;
 
@@ -176,20 +177,21 @@ const getTrayIconPath = (): string => {
   return path.join(iconsDir, ext);
 };
 
-// Create system tray icon with context menu
-const createTray = () => {
-  const iconPath = getTrayIconPath();
-  let icon = nativeImage.createFromPath(iconPath);
-
-  // テンプレートアイコンが見つからなかった場合、既存アイコンをリサイズ
-  if (!iconPath.includes("Template") && process.platform === "darwin") {
-    icon = icon.resize({ width: 16, height: 16 });
-  }
-
-  tray = new Tray(icon);
-  tray.setToolTip("CC Mascot");
+// Update tray context menu (called when visibility state changes)
+const updateTrayMenu = () => {
+  if (!tray) return;
 
   const contextMenu = Menu.buildFromTemplate([
+    {
+      label: isCharacterVisible ? "キャラクターを隠す" : "キャラクターを表示する",
+      click: () => {
+        isCharacterVisible = !isCharacterVisible;
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send("toggle-character-visibility", isCharacterVisible);
+        }
+        updateTrayMenu();
+      },
+    },
     {
       label: "設定を開く",
       click: () => {
@@ -229,6 +231,14 @@ const createTray = () => {
   ]);
 
   tray.setContextMenu(contextMenu);
+};
+
+// Create system tray icon with context menu
+const createTray = () => {
+  const icon = nativeImage.createFromPath(getTrayIconPath());
+  tray = new Tray(icon);
+  tray.setToolTip("CC Mascot");
+  updateTrayMenu();
 };
 
 // Engine type and path constants

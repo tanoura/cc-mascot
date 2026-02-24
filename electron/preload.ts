@@ -124,6 +124,15 @@ contextBridge.exposeInMainWorld("electron", {
   openDevTools: (): Promise<void> => {
     return ipcRenderer.invoke("open-devtools");
   },
+  onToggleCharacterVisibility: (callback: (visible: boolean) => void) => {
+    const listener = (_event: unknown, visible: boolean) => {
+      callback(visible);
+    };
+    ipcRenderer.on("toggle-character-visibility", listener);
+    return () => {
+      ipcRenderer.removeListener("toggle-character-visibility", listener);
+    };
+  },
   onToggleSettingsPanel: (callback: () => void) => {
     const listener = () => {
       callback();

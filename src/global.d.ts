@@ -45,6 +45,7 @@ declare global {
       onDevToolsStateChanged: (callback: (isOpen: boolean) => void) => () => void;
       openDevTools: () => Promise<void>;
       onToggleSettingsPanel: (callback: () => void) => () => void;
+      onToggleCharacterVisibility: (callback: (visible: boolean) => void) => () => void;
       getAutoUpdateCheck: () => Promise<boolean>;
       setAutoUpdateCheck: (value: boolean) => Promise<boolean>;
       getAnimationManifest: () => Promise<AnimationManifest>;
