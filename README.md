@@ -59,7 +59,7 @@ CC Mascotが自動的にエンジンプロセスを起動します。
 
 ### 2. CC Mascotアプリケーションのインストール
 
-下記から最新バイナリをインストールしてください。
+下記から最新バイナリをインストールしてください。  
 https://github.com/kazakago/cc-mascot/releases
 
 > [!NOTE]
