@@ -60,8 +60,10 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [enableIdleAnimations, setEnableIdleAnimations] = useState(true);
   const [enableSpeechAnimations, setEnableSpeechAnimations] = useState(true);
+  const [isCharacterVisible, setIsCharacterVisible] = useState(true);
 
   // ランダム待機アニメーション用ref
+  const isCharacterVisibleRef = useRef(true);
   const isSpeakingRef = useRef(false);
   const lastIdleAnimTimeRef = useRef(0);
   const nextIdleIntervalRef = useRef(0);
@@ -73,6 +75,15 @@ function App() {
   useEffect(() => {
     showSettingsRef.current = showSettings;
   }, [showSettings]);
+
+  useEffect(() => {
+    isCharacterVisibleRef.current = isCharacterVisible;
+    if (!isCharacterVisible) {
+      // 非表示になった瞬間に即座にクリックスルーを強制する
+      // （次のmousemoveまで待つと非表示直後にイベントを拾ってしまうため）
+      window.electron?.setIgnoreMouseEvents?.(true);
+    }
+  }, [isCharacterVisible]);
 
   // 初回マウント時にランダム待機タイマーを初期化
   useEffect(() => {
@@ -204,6 +215,17 @@ function App() {
       setEnableSpeechAnimations(value);
       enableSpeechAnimationsRef.current = value;
     });
+  }, []);
+
+  // Listen for toggle-character-visibility from tray menu
+  useEffect(() => {
+    const cleanup = window.electron?.onToggleCharacterVisibility?.((visible) => {
+      setIsCharacterVisible(visible);
+    });
+
+    return () => {
+      cleanup?.();
+    };
   }, []);
 
   // Listen for toggle-settings-panel from tray menu
@@ -436,6 +458,7 @@ function App() {
     let lastInsideState: boolean | null = null;
 
     const isInsideCharacterArea = (clientX: number, clientY: number) => {
+      if (!isCharacterVisibleRef.current) return false;
       const center = containerCenterRef.current;
       const size = containerSizeRef.current;
       const radiusX = size * ELLIPSE_RADIUS_X;
@@ -558,6 +581,7 @@ function App() {
             transform: `translate(${containerCenter.x - containerSize / 2}px, ${containerCenter.y - containerSize / 2}px) scale(${containerSize / renderSize})`,
             transformOrigin: "0 0",
             willChange: "transform",
+            display: isCharacterVisible ? undefined : "none",
           }}
         >
           <Canvas
