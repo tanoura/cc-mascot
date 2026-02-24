@@ -62,7 +62,8 @@ CC Mascotが自動的にエンジンプロセスを起動します。
 下記から最新バイナリをインストールしてください。
 https://github.com/kazakago/cc-mascot/releases
 
-ダウンロードすることで、[利用規約](https://kazakago.github.io/cc-mascot/terms.html)および[プライバシーポリシー](https://kazakago.github.io/cc-mascot/privacy.html)に同意したものとみなします。
+> [!NOTE]
+> ダウンロードすることで、[利用規約](https://kazakago.github.io/cc-mascot/terms.html)および[プライバシーポリシー](https://kazakago.github.io/cc-mascot/privacy.html)に同意したものとみなします。
 
 ### 3. CC Mascotアプリケーションの起動
 
