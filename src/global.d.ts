@@ -52,6 +52,7 @@ declare global {
       getActiveSession: () => Promise<string | null>;
       clearActiveSession: () => Promise<boolean>;
       onActiveSessionChanged: (callback: (sessionId: string | null) => void) => () => void;
+      onStopSpeak: (callback: () => void) => () => void;
     };
   }
 }

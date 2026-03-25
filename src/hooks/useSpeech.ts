@@ -28,6 +28,7 @@ export function useSpeech({ onStart, onEnd, speakerId, baseUrl, volumeScale, isM
   const nextIdRef = useRef(0);
   const processQueueRef = useRef<(() => Promise<void>) | undefined>(undefined);
   const currentGainNodeRef = useRef<GainNode | null>(null);
+  const currentSourceRef = useRef<AudioBufferSourceNode | null>(null);
 
   // アプリ起動時にAudioContextを初期化（Electron用）
   useEffect(() => {
@@ -147,11 +148,13 @@ export function useSpeech({ onStart, onEnd, speakerId, baseUrl, volumeScale, isM
         queueRef.current.delete(nextItem.id);
         isSpeakingRef.current = false;
         currentGainNodeRef.current = null;
+        currentSourceRef.current = null;
         onEnd();
         // 次のアイテムを処理
         processQueueRef.current?.();
       };
 
+      currentSourceRef.current = source;
       source.start();
     } catch (error) {
       console.error(`[useSpeech] Playback failed for item #${nextItem.id}:`, error);
@@ -202,5 +205,18 @@ export function useSpeech({ onStart, onEnd, speakerId, baseUrl, volumeScale, isM
     [isReady, synthesizeAudio],
   );
 
-  return { speakText, isReady };
+  const stopAll = useCallback(() => {
+    queueRef.current.clear();
+    if (currentSourceRef.current) {
+      try { currentSourceRef.current.stop(); } catch (_e) {}
+      currentSourceRef.current = null;
+    }
+    if (currentGainNodeRef.current) {
+      currentGainNodeRef.current = null;
+    }
+    isSpeakingRef.current = false;
+    onEnd();
+  }, [onEnd]);
+
+  return { speakText, stopAll, isReady };
 }

@@ -301,7 +301,7 @@ function App() {
     setCurrentAnimationUrl(idleUrls[randomIndex]);
   }, []);
 
-  const { speakText } = useSpeech({
+  const { speakText, stopAll } = useSpeech({
     onStart: handleSpeechStart,
     onEnd: handleSpeechEnd,
     speakerId,
@@ -321,6 +321,15 @@ function App() {
       avatarRef.current.setEmotion(currentEmotion);
     }
   }, [currentEmotion]);
+
+  // Listen for stop-speak signal from Electron main process
+  useEffect(() => {
+    const cleanup = window.electron?.onStopSpeak?.(() => {
+      stopAll();
+      handleSpeechEnd();
+    });
+    return () => { cleanup?.(); };
+  }, [stopAll, handleSpeechEnd]);
 
   // Listen for IPC messages from Electron main process
   useEffect(() => {

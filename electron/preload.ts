@@ -170,4 +170,9 @@ contextBridge.exposeInMainWorld("electron", {
       ipcRenderer.removeListener("active-session-changed", listener);
     };
   },
+  onStopSpeak: (callback: () => void) => {
+    const listener = () => { callback(); };
+    ipcRenderer.on("stop-speak", listener);
+    return () => { ipcRenderer.removeListener("stop-speak", listener); };
+  },
 });

@@ -54,5 +54,6 @@ export async function synthesis(query: AudioQuery, speakerId: number, baseUrl: s
 
 export async function speak(text: string, speakerId: number, baseUrl: string): Promise<ArrayBuffer> {
   const query = await createAudioQuery(text, speakerId, baseUrl);
+  query.speedScale = 1.3;
   return synthesis(query, speakerId, baseUrl);
 }

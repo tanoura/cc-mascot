@@ -6,6 +6,7 @@ import { createLogMonitor } from "./logMonitor";
 import { createActiveSessionMonitor, clearActiveSessionFile } from "./activeSessionMonitor";
 import { initAutoUpdater, checkForUpdatesManually } from "./autoUpdater";
 import fs from "fs";
+import os from "os";
 import net from "net";
 import Store from "electron-store";
 
@@ -459,9 +460,9 @@ const createWindow = () => {
     },
   });
 
-  // 初期状態ではマウスイベントを受け取る（ドラッグ可能にするため）
-  // forward: trueを指定してマウス移動イベントを常に受信
-  mainWindow.setIgnoreMouseEvents(false, { forward: true });
+  // 初期状態はクリックを通過させる（forward:trueでmousemoveは受信し続ける）
+  // キャラクター範囲内に入った時のみRendererがsetIgnoreMouseEvents(false)に切り替える
+  mainWindow.setIgnoreMouseEvents(true, { forward: true });
   mainWindow.setAlwaysOnTop(true, "pop-up-menu");
 
   // Force position to cover menu bar area on macOS
@@ -489,6 +490,17 @@ const createWindow = () => {
 
   mainWindow.on("closed", () => {
     mainWindow = null;
+  });
+
+  // シグナルファイルを監視して発話停止IPCを送る
+  const stopSignalFile = path.join(os.tmpdir(), "cc-mascot-stop.signal");
+  try {
+    fs.writeFileSync(stopSignalFile, "");
+  } catch (_e) {}
+  fs.watch(stopSignalFile, () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send("stop-speak");
+    }
   });
 
   // Track which display the window is currently on
